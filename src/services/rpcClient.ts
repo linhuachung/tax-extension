@@ -24,8 +24,14 @@ export class RpcError extends Error {
 
 type RequestByType<T extends RpcType> = Extract<RpcRequest, { type: T }>
 
+export const runtimeUnavailableError = 'runtime_unavailable'
+
 const sendMessage = <TReq, TRes>(request: TReq): Promise<TRes> =>
   new Promise((resolve, reject) => {
+    if (typeof chrome === 'undefined' || chrome?.runtime === undefined) {
+      reject(new Error(runtimeUnavailableError))
+      return
+    }
     chrome.runtime.sendMessage(request, (response: TRes) => {
       const err = chrome.runtime.lastError
       if (err !== undefined) {

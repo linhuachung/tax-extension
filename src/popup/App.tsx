@@ -1,250 +1,153 @@
 import { type ReactElement, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import { callBackground, RpcError } from '../services/rpcClient'
-import type { BackgroundViewState } from '../shared/schemas/state'
+import authenticationCard from './cards/AuthenticationCard'
+import gmailSummaryCard from './cards/GmailSummaryCard'
+import alert from './components/Alert'
+import header, { type StatusVariant } from './components/Header'
+import type { SupportedLanguage } from './components/LanguageSwitcher'
+import mainLayout from './layout/MainLayout'
+import { usePopupController } from './state/usePopupController'
+import { initTheme, setThemePersisted, type Theme } from './theme/useTheme'
 
-type UiError = {
-  title: string
-  details: string | null
-} | null
+type AuthStatus = 'signed_out' | 'signing_in' | 'signed_in' | 'signing_out' | 'error'
 
-const formatTs = (ms: number | undefined): string => {
-  if (ms === undefined) return '—'
-  try {
-    return new Date(ms).toLocaleString()
-  } catch {
-    return String(ms)
-  }
+const toSupportedLanguage = (lng: string): SupportedLanguage => {
+  if (lng.startsWith('vi')) return 'vi'
+  if (lng.startsWith('zh')) return 'zh'
+  if (lng.startsWith('ja')) return 'ja'
+  if (lng.startsWith('ko')) return 'ko'
+  return 'en'
 }
 
-const statusLabel = (status: BackgroundViewState['auth']['status']): string => {
-  if (status === 'signed_in') return 'Signed in'
-  if (status === 'signed_out') return 'Signed out'
-  if (status === 'signing_in') return 'Signing in…'
-  if (status === 'signing_out') return 'Signing out…'
-  return 'Error'
+const statusVariantFor = (status: AuthStatus | undefined): StatusVariant => {
+  if (status === undefined) return 'loading'
+  if (status === 'signed_in') return 'connected'
+  if (status === 'error') return 'error'
+  if (status === 'signing_in' || status === 'signing_out') return 'loading'
+  return 'neutral'
 }
 
-const badgeClassFor = (status: BackgroundViewState['auth']['status'] | undefined): string => {
-  if (status === 'signed_in') return 'badge ok'
-  if (status === 'error') return 'badge danger'
-  return 'badge'
+const statusLabelKeyFor = (status: AuthStatus): string => {
+  if (status === 'signed_in') return 'status.connected'
+  if (status === 'signed_out') return 'status.signedOut'
+  if (status === 'signing_in') return 'status.signingIn'
+  if (status === 'signing_out') return 'status.signingOut'
+  return 'status.error'
 }
 
-const toUiError = (e: unknown): UiError => {
-  if (e instanceof RpcError) {
-    const details = e.details !== undefined ? JSON.stringify(e.details, null, 2) : null
-    return { title: `${e.code}: ${e.message}`, details }
-  }
-  if (e instanceof Error) return { title: e.message, details: null }
-  return { title: String(e), details: null }
-}
-
-const errorFromState = (state: BackgroundViewState | null): UiError => {
-  const lastError = state?.auth.lastError
-  if (lastError === undefined) return null
-  const details =
-    lastError.details !== undefined ? JSON.stringify(lastError.details, null, 2) : null
-  return { title: `${lastError.code}: ${lastError.message}`, details }
-}
-
-const runRpc = (args: {
-  promise: Promise<BackgroundViewState>
-  setBusy: (busy: boolean) => void
-  setState: (state: BackgroundViewState) => void
-  setUiError: (error: UiError) => void
-}): void => {
-  args.setBusy(true)
-  args.setUiError(null)
-  args.promise
-    .then((next) => {
-      args.setState(next)
-    })
-    .catch((e: unknown) => {
-      args.setUiError(toUiError(e))
-    })
-    .finally(() => {
-      args.setBusy(false)
-    })
-}
-
-const header = (args: {
-  badgeClass: string
-  authStatus: BackgroundViewState['auth']['status'] | undefined
-}): ReactElement => (
-  <div className="header">
-    <div className="title">
-      <h1>VAT Invoice Intelligence</h1>
-      <div className="subtitle">Phase 1 — Auth + Gmail Profile</div>
-    </div>
-    <div className={args.badgeClass}>
-      {args.authStatus === undefined ? 'Loading…' : statusLabel(args.authStatus)}
-    </div>
-  </div>
-)
-
-const errorBox = (error: UiError): ReactElement | null => {
-  if (error === null) return null
-  return (
-    <div className="errorBox">
-      <div>{error.title}</div>
-      {error.details === null ? null : <div className="muted">{error.details}</div>}
-    </div>
-  )
-}
-
-const accountPanel = (auth: BackgroundViewState['auth'] | undefined): ReactElement => (
-  <div className="panel">
-    <div className="row">
-      <div className="label">Account</div>
-      <div className="value">{auth?.email ?? '—'}</div>
-    </div>
-    <div className="row">
-      <div className="label">Last login</div>
-      <div className="value">{formatTs(auth?.lastLoginAt)}</div>
-    </div>
-    <div className="row">
-      <div className="label">Last logout</div>
-      <div className="value">{formatTs(auth?.lastLogoutAt)}</div>
-    </div>
-  </div>
-)
-
-const actions = (args: {
-  busy: boolean
-  onLogin: () => void
-  onLogout: () => void
-  onRefreshProfile: () => void
-}): ReactElement => (
-  <div className="actions">
-    <button className="primary" disabled={args.busy} onClick={args.onLogin}>
-      Login
-    </button>
-    <button className="danger" disabled={args.busy} onClick={args.onLogout}>
-      Logout
-    </button>
-    <button disabled={args.busy} onClick={args.onRefreshProfile}>
-      Refresh Profile
-    </button>
-  </div>
-)
-
-const gmailPanel = (gmail: BackgroundViewState['gmail'] | undefined): ReactElement => (
-  <div className="panel">
-    <div className="row">
-      <div className="label">Messages</div>
-      <div className="value">{gmail?.profile?.messagesTotal ?? '—'}</div>
-    </div>
-    <div className="row">
-      <div className="label">Threads</div>
-      <div className="value">{gmail?.profile?.threadsTotal ?? '—'}</div>
-    </div>
-    <div className="row">
-      <div className="label">historyId</div>
-      <div className="value">{gmail?.profile?.historyId ?? '—'}</div>
-    </div>
-    <div className="row">
-      <div className="label">Last fetched</div>
-      <div className="value">{formatTs(gmail?.lastProfileFetchedAt)}</div>
-    </div>
-  </div>
-)
-
-const footerNote = (): ReactElement => (
-  <div className="footerNote">
-    Popup is a thin UI client. All OAuth + Gmail API calls run in the MV3 background service worker.
-  </div>
-)
-
-const usePopupController = (): {
-  state: BackgroundViewState | null
-  busy: boolean
-  badgeClass: string
-  error: UiError
-  login: () => void
-  logout: () => void
-  refreshProfile: () => void
-} => {
-  const [state, setState] = useState<BackgroundViewState | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [uiError, setUiError] = useState<UiError>(null)
+const useThemeState = (): { theme: Theme; setTheme: (next: Theme) => void } => {
+  const [theme, setTheme] = useState<Theme>(() => initTheme())
 
   useEffect(() => {
-    runRpc({
-      setBusy,
-      setState,
-      setUiError,
-      promise: callBackground('app.getState', {}),
-    })
-  }, [setBusy, setState, setUiError])
+    setThemePersisted(theme)
+  }, [theme])
 
-  return {
-    state,
-    busy,
-    badgeClass: badgeClassFor(state?.auth.status),
-    error: uiError ?? errorFromState(state),
-    login: () =>
-      runRpc({
-        setBusy,
-        setState,
-        setUiError,
-        promise: callBackground('auth.login', { interactive: true }),
-      }),
-    logout: () =>
-      runRpc({
-        setBusy,
-        setState,
-        setUiError,
-        promise: callBackground('auth.logout', {}),
-      }),
-    refreshProfile: () =>
-      runRpc({
-        setBusy,
-        setState,
-        setUiError,
-        promise: callBackground('gmail.getProfile', {}),
-      }),
-  }
+  return { theme, setTheme }
 }
 
-const layout = (args: {
-  badgeClass: string
+const useHeaderModel = (args: {
+  authStatus: AuthStatus | undefined
+  t: (key: string) => string
+}): { statusVariant: StatusVariant; statusLabel: string } => {
+  const statusVariant = statusVariantFor(args.authStatus)
+  const statusLabel =
+    args.authStatus === undefined
+      ? args.t('status.loading')
+      : args.t(statusLabelKeyFor(args.authStatus))
+  return { statusVariant, statusLabel }
+}
+
+const alertTitleFor = (args: {
+  errorTitle: string | undefined
+  runtimeUnavailableError: string
+  t: (key: string) => string
+}): string | null => {
+  if (args.errorTitle === undefined) return null
+  if (args.errorTitle === args.runtimeUnavailableError) return args.t('errors.runtimeUnavailable')
+  return args.errorTitle
+}
+
+const renderAppMain = (args: {
+  t: (key: string) => string
+  auth: unknown
+  gmail: unknown
   busy: boolean
-  error: UiError
-  gmail: BackgroundViewState['gmail'] | undefined
   login: () => void
   logout: () => void
   refreshProfile: () => void
-  auth: BackgroundViewState['auth'] | undefined
 }): ReactElement => (
-  <div className="container">
-    {header({ badgeClass: args.badgeClass, authStatus: args.auth?.status })}
-    {errorBox(args.error)}
-    {accountPanel(args.auth)}
-    {actions({
+  <div className="grid">
+    {authenticationCard({
+      t: args.t as never,
+      auth: args.auth as never,
       busy: args.busy,
       onLogin: args.login,
       onLogout: args.logout,
       onRefreshProfile: args.refreshProfile,
     })}
-    {gmailPanel(args.gmail)}
-    {footerNote()}
+    {gmailSummaryCard({ t: args.t as never, gmail: args.gmail as never })}
   </div>
 )
 
-const useApp = (): ReactElement => {
-  const controller = usePopupController()
+const buildAlertModel = (args: {
+  error: { title: string; details: string | null } | null
+  runtimeUnavailableError: string
+  t: (key: string) => string
+}): { title: string; details: string | null } | null => {
+  if (args.error === null) return null
+  const title = alertTitleFor({
+    errorTitle: args.error.title,
+    runtimeUnavailableError: args.runtimeUnavailableError,
+    t: args.t,
+  })
+  return { title: title ?? '', details: args.error.details }
+}
 
-  return layout({
-    badgeClass: controller.badgeClass,
-    busy: controller.busy,
+const useApp = (): ReactElement => {
+  const { t, i18n } = useTranslation()
+  const controller = usePopupController()
+  const themeState = useThemeState()
+
+  const language = toSupportedLanguage(i18n.language)
+  const authStatus = controller.state?.auth.status as AuthStatus | undefined
+  const headerModel = useHeaderModel({ authStatus, t })
+  const alertModel = buildAlertModel({
     error: controller.error,
+    runtimeUnavailableError: controller.runtimeUnavailableError,
+    t,
+  })
+
+  const headerNode = header({
+    t,
+    title: t('app.productName'),
+    phase: t('app.phase'),
+    statusLabel: headerModel.statusLabel,
+    statusVariant: headerModel.statusVariant,
+    language,
+    onLanguageChange: (lng) => {
+      void i18n.changeLanguage(lng)
+    },
+    theme: themeState.theme,
+    onThemeChange: themeState.setTheme,
+  })
+
+  const alertNode =
+    alertModel === null ? null : alert({ title: alertModel.title, details: alertModel.details })
+
+  const mainNode = renderAppMain({
+    t,
+    auth: controller.state?.auth,
     gmail: controller.state?.gmail,
+    busy: controller.busy,
     login: controller.login,
     logout: controller.logout,
     refreshProfile: controller.refreshProfile,
-    auth: controller.state?.auth,
   })
+
+  const footerNode = <div className="footer">{t('footer.note')}</div>
+
+  return mainLayout({ header: headerNode, alert: alertNode, main: mainNode, footer: footerNode })
 }
 
 export default useApp

@@ -1,0 +1,47 @@
+:root {
+  /* spacing scale (8px only) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+
+  /* typography */
+  --font-title: 16px;
+  --font-section: 13px;
+  --font-body: 12px;
+  --font-label: 11px;
+  --font-meta: 11px;
+
+  --line-title: 1.25;
+  --line-body: 1.45;
+
+  /* required tokens */
+  --bg-primary: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --accent: #4f46e5;
+  --border-soft: rgba(15, 23, 42, 0.12);
+  --radius: 16px;
+  --shadow-soft: 0 10px 30px rgba(2, 6, 23, 0.08);
+
+  /* status */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg-primary: #0f172a;
+  --bg-card: rgba(30, 41, 59, 0.88);
+  --text-primary: #f8fafc;
+  --text-secondary: rgba(148, 163, 184, 0.92);
+  --accent: #6366f1;
+  --border-soft: rgba(148, 163, 184, 0.18);
+  --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.35);
+
+  color-scheme: dark;
+}
+

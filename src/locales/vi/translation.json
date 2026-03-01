@@ -1,0 +1,55 @@
+{
+  "app": {
+    "productName": "VAT Invoice Intelligence",
+    "phase": "Giai đoạn 1 — Xác thực + Hồ sơ Gmail"
+  },
+  "status": {
+    "loading": "Đang tải…",
+    "connected": "Đã kết nối",
+    "signedOut": "Đã đăng xuất",
+    "signingIn": "Đang đăng nhập…",
+    "signingOut": "Đang đăng xuất…",
+    "error": "Lỗi"
+  },
+  "header": {
+    "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "themeLight": "Sáng",
+    "themeDark": "Tối"
+  },
+  "sections": {
+    "authentication": "Xác thực",
+    "gmailSummary": "Tổng quan dữ liệu Gmail"
+  },
+  "actions": {
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "refreshProfile": "Làm mới hồ sơ"
+  },
+  "fields": {
+    "account": "Tài khoản",
+    "lastLogin": "Lần đăng nhập gần nhất",
+    "lastLogout": "Lần đăng xuất gần nhất",
+    "messages": "Thư",
+    "threads": "Chuỗi",
+    "historyId": "History ID",
+    "lastFetched": "Lần lấy dữ liệu gần nhất"
+  },
+  "footer": {
+    "note": "Popup là UI client mỏng. Mọi gọi OAuth + Gmail API chạy trong MV3 background service worker."
+  },
+  "errors": {
+    "runtimeUnavailable": "Không khả dụng runtime của tiện ích. Hãy tải lại tiện ích hoặc mở popup từ thanh công cụ."
+  },
+  "common": {
+    "placeholder": "—"
+  },
+  "languages": {
+    "en": "EN",
+    "vi": "VI",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어"
+  }
+}
+

@@ -1,0 +1,55 @@
+{
+  "app": {
+    "productName": "VAT Invoice Intelligence",
+    "phase": "Phase 1 — Auth + Gmail Profile"
+  },
+  "status": {
+    "loading": "Loading…",
+    "connected": "Connected",
+    "signedOut": "Signed out",
+    "signingIn": "Signing in…",
+    "signingOut": "Signing out…",
+    "error": "Error"
+  },
+  "header": {
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark"
+  },
+  "sections": {
+    "authentication": "Authentication",
+    "gmailSummary": "Gmail data summary"
+  },
+  "actions": {
+    "login": "Login",
+    "logout": "Logout",
+    "refreshProfile": "Refresh profile"
+  },
+  "fields": {
+    "account": "Account",
+    "lastLogin": "Last login",
+    "lastLogout": "Last logout",
+    "messages": "Messages",
+    "threads": "Threads",
+    "historyId": "History ID",
+    "lastFetched": "Last fetched"
+  },
+  "footer": {
+    "note": "Popup is a thin UI client. All OAuth + Gmail API calls run in the MV3 background service worker."
+  },
+  "errors": {
+    "runtimeUnavailable": "Extension runtime not available. Reload the extension or open the popup from the toolbar."
+  },
+  "common": {
+    "placeholder": "—"
+  },
+  "languages": {
+    "en": "EN",
+    "vi": "VI",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어"
+  }
+}
+

@@ -1,0 +1,55 @@
+{
+  "app": {
+    "productName": "VAT 請求書インテリジェンス",
+    "phase": "フェーズ 1 — 認証 + Gmail プロフィール"
+  },
+  "status": {
+    "loading": "読み込み中…",
+    "connected": "接続済み",
+    "signedOut": "サインアウト",
+    "signingIn": "サインイン中…",
+    "signingOut": "サインアウト中…",
+    "error": "エラー"
+  },
+  "header": {
+    "language": "言語",
+    "theme": "テーマ",
+    "themeLight": "ライト",
+    "themeDark": "ダーク"
+  },
+  "sections": {
+    "authentication": "認証",
+    "gmailSummary": "Gmail データ概要"
+  },
+  "actions": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "refreshProfile": "プロフィール更新"
+  },
+  "fields": {
+    "account": "アカウント",
+    "lastLogin": "最終ログイン",
+    "lastLogout": "最終ログアウト",
+    "messages": "メッセージ",
+    "threads": "スレッド",
+    "historyId": "History ID",
+    "lastFetched": "最終取得"
+  },
+  "footer": {
+    "note": "ポップアップは薄い UI クライアントです。OAuth + Gmail API の呼び出しはすべて MV3 のバックグラウンド サービスワーカーで実行されます。"
+  },
+  "errors": {
+    "runtimeUnavailable": "拡張機能のランタイムが利用できません。拡張機能を再読み込みするか、ツールバーからポップアップを開いてください。"
+  },
+  "common": {
+    "placeholder": "—"
+  },
+  "languages": {
+    "en": "EN",
+    "vi": "VI",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어"
+  }
+}
+

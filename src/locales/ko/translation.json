@@ -1,0 +1,55 @@
+{
+  "app": {
+    "productName": "VAT 인보이스 인텔리전스",
+    "phase": "페이즈 1 — 인증 + Gmail 프로필"
+  },
+  "status": {
+    "loading": "로딩 중…",
+    "connected": "연결됨",
+    "signedOut": "로그아웃됨",
+    "signingIn": "로그인 중…",
+    "signingOut": "로그아웃 중…",
+    "error": "오류"
+  },
+  "header": {
+    "language": "언어",
+    "theme": "테마",
+    "themeLight": "라이트",
+    "themeDark": "다크"
+  },
+  "sections": {
+    "authentication": "인증",
+    "gmailSummary": "Gmail 데이터 요약"
+  },
+  "actions": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "refreshProfile": "프로필 새로고침"
+  },
+  "fields": {
+    "account": "계정",
+    "lastLogin": "마지막 로그인",
+    "lastLogout": "마지막 로그아웃",
+    "messages": "메시지",
+    "threads": "스레드",
+    "historyId": "History ID",
+    "lastFetched": "마지막 가져옴"
+  },
+  "footer": {
+    "note": "팝업은 얇은 UI 클라이언트입니다. 모든 OAuth + Gmail API 호출은 MV3 백그라운드 서비스 워커에서 실행됩니다."
+  },
+  "errors": {
+    "runtimeUnavailable": "확장 런타임을 사용할 수 없습니다. 확장을 다시 로드하거나 툴바에서 팝업을 열어 주세요."
+  },
+  "common": {
+    "placeholder": "—"
+  },
+  "languages": {
+    "en": "EN",
+    "vi": "VI",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어"
+  }
+}
+

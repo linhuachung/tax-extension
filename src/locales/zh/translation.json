@@ -1,0 +1,55 @@
+{
+  "app": {
+    "productName": "增值税发票智能助手",
+    "phase": "阶段 1 — 认证 + Gmail 资料"
+  },
+  "status": {
+    "loading": "加载中…",
+    "connected": "已连接",
+    "signedOut": "已退出",
+    "signingIn": "正在登录…",
+    "signingOut": "正在退出…",
+    "error": "错误"
+  },
+  "header": {
+    "language": "语言",
+    "theme": "主题",
+    "themeLight": "浅色",
+    "themeDark": "深色"
+  },
+  "sections": {
+    "authentication": "身份认证",
+    "gmailSummary": "Gmail 数据概览"
+  },
+  "actions": {
+    "login": "登录",
+    "logout": "退出",
+    "refreshProfile": "刷新资料"
+  },
+  "fields": {
+    "account": "账户",
+    "lastLogin": "上次登录",
+    "lastLogout": "上次退出",
+    "messages": "邮件数",
+    "threads": "会话数",
+    "historyId": "History ID",
+    "lastFetched": "上次获取"
+  },
+  "footer": {
+    "note": "弹窗是轻量 UI 客户端。所有 OAuth + Gmail API 调用均在 MV3 后台服务工作线程中执行。"
+  },
+  "errors": {
+    "runtimeUnavailable": "扩展运行环境不可用。请重新加载扩展或从工具栏打开弹窗。"
+  },
+  "common": {
+    "placeholder": "—"
+  },
+  "languages": {
+    "en": "EN",
+    "vi": "VI",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어"
+  }
+}
+
