@@ -1,5 +1,7 @@
 * text=auto
 
+.gitattributes text eol=lf
+
 # Keep consistent LF endings in repo (Windows-safe).
 *.ts  text eol=lf
 *.tsx text eol=lf
