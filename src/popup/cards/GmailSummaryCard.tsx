@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next'
 import type { ReactElement } from 'react'
 
-import type { BackgroundViewState } from '../../shared/schemas/state'
+import type { BackgroundViewState } from '../../domain/schemas/state'
 import card from '../components/Card'
 import sectionTitle from '../components/SectionTitle'
 

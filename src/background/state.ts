@@ -3,12 +3,14 @@ import { createStore } from 'zustand/vanilla'
 import { storageLocalGet, storageLocalSet } from '../core/chrome'
 import { storageKeys } from '../core/constants'
 import type { AppError } from '../core/errors'
-import type { GmailProfile } from '../shared/schemas/gmail'
+import type { ScanState } from '../core/types'
+import type { GmailProfile } from '../domain/schemas/gmail'
 import {
   type PersistedBackgroundState,
   persistedBackgroundStateSchema,
-} from '../shared/schemas/persistedState'
-import type { AuthStatus, BackgroundViewState } from '../shared/schemas/state'
+} from '../domain/schemas/persistedState'
+import type { AuthStatus, BackgroundViewState } from '../domain/schemas/state'
+import { assertValidScanTransition } from './scan/scan.state'
 
 type AuthState = {
   status: AuthStatus
@@ -23,38 +25,64 @@ type GmailState = {
   lastProfileFetchedAt?: number
 }
 
+export type ScanStatus = {
+  state: ScanState
+  lastError?: AppError
+}
+
 type BackgroundState = {
   auth: AuthState
   gmail: GmailState
+  scan: ScanStatus
 }
 
-type BackgroundActions = {
-  setAuth: (patch: Partial<AuthState>) => void
-  setGmail: (patch: Partial<GmailState>) => void
-  reset: () => void
-}
+const initialScanStatus: ScanStatus = { state: 'idle' }
 
 const initialState: BackgroundState = {
   auth: { status: 'signed_out' },
   gmail: {},
+  scan: initialScanStatus,
 }
 
-export const backgroundStore = createStore<BackgroundState & BackgroundActions>()((set) => ({
-  ...initialState,
-  setAuth: (patch: Partial<AuthState>): void =>
-    set((s) => ({
-      auth: { ...s.auth, ...patch },
-    })),
-  setGmail: (patch: Partial<GmailState>): void =>
-    set((s) => ({
-      gmail: { ...s.gmail, ...patch },
-    })),
-  reset: (): void => set(() => ({ ...initialState })),
-}))
+const store = createStore<BackgroundState>()(() => ({ ...initialState }))
+
+export const getState = (): BackgroundState => store.getState()
+
+/** Atomic state update: read, compute next, validate, replace in one sync block. No race across async. */
+export const updateState = (updater: (prev: BackgroundState) => BackgroundState): void => {
+  const prev = store.getState()
+  const next = updater(prev)
+  if (next.scan !== prev.scan && next.scan.state !== prev.scan.state) {
+    assertValidScanTransition(prev.scan.state, next.scan.state)
+  }
+  store.setState(next)
+}
+
+export const setState = (next: BackgroundState): void => {
+  updateState(() => next)
+}
 
 export const getViewState = (): BackgroundViewState => {
-  const state = backgroundStore.getState()
-  return { auth: state.auth, gmail: state.gmail }
+  const s = store.getState()
+  return { auth: s.auth, gmail: s.gmail }
+}
+
+export const patchAuth = (patch: Partial<AuthState>): void => {
+  updateState((s) => ({ ...s, auth: { ...s.auth, ...patch } }))
+}
+
+export const patchGmail = (patch: Partial<GmailState>): void => {
+  updateState((s) => ({ ...s, gmail: { ...s.gmail, ...patch } }))
+}
+
+export const getScanState = (): ScanStatus => store.getState().scan
+
+export const setScanStateInternal = (patch: Partial<ScanStatus>): void => {
+  updateState((s) => {
+    const nextScan: ScanStatus = { ...s.scan, ...patch }
+    if (patch.state !== undefined) assertValidScanTransition(s.scan.state, patch.state)
+    return { ...s, scan: nextScan }
+  })
 }
 
 const toPersistedState = (state: BackgroundState): PersistedBackgroundState => {
@@ -88,10 +116,10 @@ export const hydrateFromStorage = async (): Promise<void> => {
   if (persistedStatus === 'signed_in') status = 'signed_in'
   else if (persistedStatus === 'error') status = 'error'
 
-  backgroundStore.setState((s) => ({
-    ...s,
+  updateState((prev) => ({
+    ...prev,
     auth: {
-      ...s.auth,
+      ...prev.auth,
       status,
       email: persisted.auth.email,
       lastLoginAt: persisted.auth.lastLoginAt,
@@ -99,7 +127,7 @@ export const hydrateFromStorage = async (): Promise<void> => {
       lastError: undefined,
     },
     gmail: {
-      ...s.gmail,
+      ...prev.gmail,
       profile: persisted.gmail.profile,
       lastProfileFetchedAt: persisted.gmail.lastProfileFetchedAt,
     },
@@ -107,6 +135,6 @@ export const hydrateFromStorage = async (): Promise<void> => {
 }
 
 export const persistToStorage = async (): Promise<void> => {
-  const persisted = toPersistedState(backgroundStore.getState())
+  const persisted = toPersistedState(getState())
   await storageLocalSet(storageKeys.persistedBackgroundState, persisted)
 }

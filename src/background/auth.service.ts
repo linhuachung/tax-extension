@@ -6,20 +6,23 @@ import { createLogger } from './logger/logger'
 const logger = createLogger('background.auth')
 
 let inMemoryToken: string | null = null
-let inflight: Promise<string> | null = null
+let refreshingPromise: Promise<string> | null = null
 
 const getAccessToken = async (options: { interactive: boolean }): Promise<string> => {
   if (inMemoryToken !== null) return inMemoryToken
-  if (inflight !== null) return inflight
+  if (refreshingPromise !== null) return refreshingPromise
 
-  const tokenPromise = (async (): Promise<string> => {
-    const token = await identityGetAuthToken(options.interactive)
-    inMemoryToken = token
-    return token
-  })().finally(() => void (inflight = null))
+  refreshingPromise = (async (): Promise<string> => {
+    try {
+      const token = await identityGetAuthToken(options.interactive)
+      inMemoryToken = token
+      return token
+    } finally {
+      refreshingPromise = null
+    }
+  })()
 
-  inflight = tokenPromise
-  return tokenPromise
+  return refreshingPromise
 }
 
 export const ensureValidToken = async (): Promise<string> =>

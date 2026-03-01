@@ -11,6 +11,18 @@ export type AppError = {
   details?: unknown
 }
 
+/** Normalized error for RPC boundary: never leak raw Error or stack. */
+export const normalizeError = (
+  e: unknown,
+  code = 'UNKNOWN_ERROR',
+): { code: string; message: string } => {
+  if (e instanceof Error) {
+    const message = e.message.length > 0 ? e.message : 'Unexpected error'
+    return { code, message }
+  }
+  return { code: 'UNKNOWN_ERROR', message: 'Unexpected error' }
+}
+
 export const toAppError = (domain: AppErrorDomain, e: unknown): AppError => {
   if (e instanceof ZodError) {
     return {

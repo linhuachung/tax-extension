@@ -1,5 +1,6 @@
-import type { LogLevel } from '../../shared/schemas/env'
-import { env } from '../../shared/utils/env'
+import { log as coreLog } from '../../core/logger'
+import type { LogLevel } from '../../domain/schemas/env'
+import { env } from '../../domain/utils/env'
 
 type LogRecord = {
   ts: string
@@ -24,11 +25,10 @@ const shouldLog = (level: Exclude<LogLevel, 'silent'>): boolean => {
 }
 
 const emit = (level: Exclude<LogLevel, 'silent'>, record: LogRecord): void => {
-  if (level === 'error') {
-    console.error(record)
-  } else {
-    console.warn(record)
-  }
+  if (level === 'error') coreLog.error(record)
+  else if (level === 'warn') coreLog.warn(record)
+  else if (level === 'info') coreLog.info(record)
+  else coreLog.debug(record)
 }
 
 export type Logger = {

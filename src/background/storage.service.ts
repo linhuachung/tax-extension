@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { storageLocalGet, storageLocalSet } from '../core/chrome'
 import { storageKeys } from '../core/constants'
 
+const storageVersion = 1
+
 const scanMetaSchema = z
   .object({
     lastScanAt: z.number().int().optional(),
@@ -12,7 +14,6 @@ const scanMetaSchema = z
 
 export type ScanMeta = z.infer<typeof scanMetaSchema>
 
-// Phase 1 placeholders (explicit API; used in Phase 2)
 const invoiceSchema = z
   .object({
     id: z.string().min(1),
@@ -37,45 +38,87 @@ const messageSchema = z
 
 export type StoredMessage = z.infer<typeof messageSchema>
 
-const invoicesSchema = z.array(invoiceSchema)
-const messagesSchema = z.array(messageSchema)
+const storageRootSchema = z
+  .object({
+    version: z.literal(storageVersion),
+    scanMeta: scanMetaSchema,
+    invoices: z.array(invoiceSchema),
+    messages: z.array(messageSchema),
+  })
+  .strict()
+
+type StorageRoot = z.infer<typeof storageRootSchema>
+
+const defaultRoot = (): StorageRoot => ({
+  version: storageVersion,
+  scanMeta: {},
+  invoices: [],
+  messages: [],
+})
+
+/** Migration hook: map old or unknown storage shape to current root. No silent wipe. */
+const migrateStorage = (oldRoot: unknown): StorageRoot => {
+  const parsed = storageRootSchema.safeParse(oldRoot)
+  if (parsed.success && parsed.data.version === storageVersion) return parsed.data
+  return defaultRoot()
+}
+
+const readRoot = async (): Promise<StorageRoot> => {
+  const raw = await storageLocalGet<unknown>(storageKeys.storageRoot)
+  if (raw === undefined) return defaultRoot()
+  return migrateStorage(raw)
+}
+
+const writeRoot = async (root: StorageRoot): Promise<void> => {
+  await storageLocalSet(storageKeys.storageRoot, storageRootSchema.parse(root))
+}
+
+const updateRoot = async (updater: (prev: StorageRoot) => StorageRoot): Promise<void> => {
+  const prev = await readRoot()
+  const next = updater(prev)
+  await writeRoot(next)
+}
 
 export const getScanMeta = async (): Promise<ScanMeta> => {
-  const raw = await storageLocalGet<unknown>(storageKeys.scanMeta)
-  if (raw === undefined) return {}
-  return scanMetaSchema.parse(raw)
+  const root = await readRoot()
+  return { ...root.scanMeta }
 }
 
 export const setScanMeta = async (meta: ScanMeta): Promise<void> => {
-  await storageLocalSet(storageKeys.scanMeta, scanMetaSchema.parse(meta))
+  await updateRoot((root) => ({
+    ...root,
+    scanMeta: scanMetaSchema.parse(meta),
+  }))
 }
 
 export const getInvoices = async (): Promise<Invoice[]> => {
-  const raw = await storageLocalGet<unknown>(storageKeys.invoices)
-  if (raw === undefined) return []
-  return invoicesSchema.parse(raw)
+  const root = await readRoot()
+  return [...root.invoices]
 }
 
 export const upsertInvoice = async (invoice: Invoice): Promise<void> => {
-  const list = await getInvoices()
-  const idx = list.findIndex((x) => x.id === invoice.id)
-  const next = [...list]
-  if (idx === -1) next.push(invoice)
-  else next[idx] = invoice
-  await storageLocalSet(storageKeys.invoices, invoicesSchema.parse(next))
+  await updateRoot((root) => {
+    const list = [...root.invoices]
+    const idx = list.findIndex((x) => x.id === invoice.id)
+    const nextInvoice = invoiceSchema.parse(invoice)
+    if (idx === -1) list.push(nextInvoice)
+    else list[idx] = nextInvoice
+    return { ...root, invoices: list }
+  })
 }
 
 export const getMessages = async (): Promise<StoredMessage[]> => {
-  const raw = await storageLocalGet<unknown>(storageKeys.messages)
-  if (raw === undefined) return []
-  return messagesSchema.parse(raw)
+  const root = await readRoot()
+  return [...root.messages]
 }
 
 export const upsertMessage = async (message: StoredMessage): Promise<void> => {
-  const list = await getMessages()
-  const idx = list.findIndex((x) => x.id === message.id)
-  const next = [...list]
-  if (idx === -1) next.push(message)
-  else next[idx] = message
-  await storageLocalSet(storageKeys.messages, messagesSchema.parse(next))
+  await updateRoot((root) => {
+    const list = [...root.messages]
+    const idx = list.findIndex((x) => x.id === message.id)
+    const nextMessage = messageSchema.parse(message)
+    if (idx === -1) list.push(nextMessage)
+    else list[idx] = nextMessage
+    return { ...root, messages: list }
+  })
 }

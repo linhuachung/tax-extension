@@ -1,8 +1,8 @@
 import type { z } from 'zod'
 
 import { retry } from '../core/async'
-import { type GmailProfile, gmailProfileSchema } from '../shared/schemas/gmail'
-import { env } from '../shared/utils/env'
+import { type GmailProfile, gmailProfileSchema } from '../domain/schemas/gmail'
+import { env } from '../domain/utils/env'
 import { clearTokenCache, ensureValidToken, removeCachedAuthToken } from './auth.service'
 import { createLogger } from './logger/logger'
 

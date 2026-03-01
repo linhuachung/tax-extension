@@ -4,7 +4,7 @@ import { initBackground, registerMessaging } from './messaging'
 
 const logger = createLogger('background')
 
-initBackground()
+void initBackground()
   .then(() => {
     registerMessaging()
   })

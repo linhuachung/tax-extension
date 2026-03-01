@@ -84,3 +84,13 @@ export const identityRemoveCachedAuthToken = (token: string): Promise<void> =>
       resolve()
     })
   })
+
+export type RuntimeMessageListener = (
+  message: unknown,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: unknown) => void,
+) => boolean
+
+export const addRuntimeMessageListener = (listener: RuntimeMessageListener): void => {
+  requireChromeRuntime().onMessage.addListener(listener)
+}

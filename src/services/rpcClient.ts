@@ -1,40 +1,36 @@
 import { runtimeSendMessage } from '../core/chrome'
-import type { AppError } from '../shared/schemas/errors'
 import {
+  type NormalizedAppError,
+  type RpcMap,
   type RpcRequest,
   rpcRequestSchema,
   rpcResponseSchema,
   type RpcType,
-} from '../shared/schemas/rpc'
-import type { BackgroundViewState } from '../shared/schemas/state'
-import { newRequestId } from '../shared/utils/ids'
+} from '../domain/rpc/contracts'
+import type { BackgroundViewState } from '../domain/schemas/state'
+import { newRequestId } from '../domain/utils/ids'
 
 export class RpcError extends Error {
-  readonly domain: AppError['domain']
-  readonly recoverable: AppError['recoverable']
-  readonly details?: AppError['details']
-  readonly appError: AppError
+  readonly code: NormalizedAppError['code']
+  readonly appError: NormalizedAppError
 
-  constructor(appError: AppError) {
+  constructor(appError: NormalizedAppError) {
     super(appError.message)
     this.name = 'RpcError'
     this.appError = appError
-    this.domain = appError.domain
-    this.recoverable = appError.recoverable
-    this.details = appError.details
+    this.code = appError.code
   }
 }
 
-type RequestByType<T extends RpcType> = Extract<RpcRequest, { type: T }>
-
 export const callBackground = async <T extends RpcType>(
   type: T,
-  payload: RequestByType<T>['payload'],
-): Promise<BackgroundViewState> => {
+  payload: RpcMap[T]['request'],
+): Promise<RpcMap[T]['response']> => {
   const requestId = newRequestId()
-  const request = rpcRequestSchema.parse({ requestId, type, payload })
+  const request: RpcRequest<T> = { requestId, type, payload }
+  rpcRequestSchema.parse(request)
 
-  const rawResponse = await runtimeSendMessage<typeof request, unknown>(request)
+  const rawResponse = await runtimeSendMessage<RpcRequest<T>, unknown>(request)
   const response = rpcResponseSchema.parse(rawResponse)
 
   if (response.requestId !== requestId) {
@@ -44,5 +40,16 @@ export const callBackground = async <T extends RpcType>(
   }
 
   if (!response.ok) throw new RpcError(response.error)
-  return response.data.state
+  return response.data
 }
+
+/** Convenience: call and return state (for appGetState, authLogin, etc.). */
+export const callBackgroundState = async <T extends RpcType>(
+  type: T,
+  payload: RpcMap[T]['request'],
+): Promise<BackgroundViewState> => {
+  const data = await callBackground(type, payload)
+  return data.state
+}
+
+export type { BackgroundViewState }
