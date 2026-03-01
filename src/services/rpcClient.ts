@@ -1,3 +1,4 @@
+import { runtimeSendMessage } from '../core/chrome'
 import type { AppError } from '../shared/schemas/errors'
 import {
   type RpcRequest,
@@ -9,7 +10,8 @@ import type { BackgroundViewState } from '../shared/schemas/state'
 import { newRequestId } from '../shared/utils/ids'
 
 export class RpcError extends Error {
-  readonly code: AppError['code']
+  readonly domain: AppError['domain']
+  readonly recoverable: AppError['recoverable']
   readonly details?: AppError['details']
   readonly appError: AppError
 
@@ -17,30 +19,13 @@ export class RpcError extends Error {
     super(appError.message)
     this.name = 'RpcError'
     this.appError = appError
-    this.code = appError.code
+    this.domain = appError.domain
+    this.recoverable = appError.recoverable
     this.details = appError.details
   }
 }
 
 type RequestByType<T extends RpcType> = Extract<RpcRequest, { type: T }>
-
-export const runtimeUnavailableError = 'runtime_unavailable'
-
-const sendMessage = <TReq, TRes>(request: TReq): Promise<TRes> =>
-  new Promise((resolve, reject) => {
-    if (typeof chrome === 'undefined' || chrome?.runtime === undefined) {
-      reject(new Error(runtimeUnavailableError))
-      return
-    }
-    chrome.runtime.sendMessage(request, (response: TRes) => {
-      const err = chrome.runtime.lastError
-      if (err !== undefined) {
-        reject(new Error(err.message))
-        return
-      }
-      resolve(response)
-    })
-  })
 
 export const callBackground = async <T extends RpcType>(
   type: T,
@@ -49,7 +34,7 @@ export const callBackground = async <T extends RpcType>(
   const requestId = newRequestId()
   const request = rpcRequestSchema.parse({ requestId, type, payload })
 
-  const rawResponse = await sendMessage<typeof request, unknown>(request)
+  const rawResponse = await runtimeSendMessage<typeof request, unknown>(request)
   const response = rpcResponseSchema.parse(rawResponse)
 
   if (response.requestId !== requestId) {

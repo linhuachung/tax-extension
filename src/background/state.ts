@@ -1,15 +1,14 @@
 import { createStore } from 'zustand/vanilla'
 
-import type { AppError } from '../../shared/schemas/errors'
-import type { GmailProfile } from '../../shared/schemas/gmail'
+import { storageLocalGet, storageLocalSet } from '../core/chrome'
+import { storageKeys } from '../core/constants'
+import type { AppError } from '../core/errors'
+import type { GmailProfile } from '../shared/schemas/gmail'
 import {
   type PersistedBackgroundState,
   persistedBackgroundStateSchema,
-} from '../../shared/schemas/persistedState'
-import type { AuthStatus, BackgroundViewState } from '../../shared/schemas/state'
-import { storageGet, storageRemove, storageSet } from './chromeStorage'
-
-const persistKey = 'taxintel.persist.v1'
+} from '../shared/schemas/persistedState'
+import type { AuthStatus, BackgroundViewState } from '../shared/schemas/state'
 
 type AuthState = {
   status: AuthStatus
@@ -44,20 +43,19 @@ export const backgroundStore = createStore<BackgroundState & BackgroundActions>(
   ...initialState,
   setAuth: (patch: Partial<AuthState>): void =>
     set((s) => ({
-      auth: {
-        ...s.auth,
-        ...patch,
-      },
+      auth: { ...s.auth, ...patch },
     })),
   setGmail: (patch: Partial<GmailState>): void =>
     set((s) => ({
-      gmail: {
-        ...s.gmail,
-        ...patch,
-      },
+      gmail: { ...s.gmail, ...patch },
     })),
   reset: (): void => set(() => ({ ...initialState })),
 }))
+
+export const getViewState = (): BackgroundViewState => {
+  const state = backgroundStore.getState()
+  return { auth: state.auth, gmail: state.gmail }
+}
 
 const toPersistedState = (state: BackgroundState): PersistedBackgroundState => {
   let stableAuthStatus: 'signed_out' | 'signed_in' | 'error' = 'signed_out'
@@ -79,19 +77,13 @@ const toPersistedState = (state: BackgroundState): PersistedBackgroundState => {
   })
 }
 
-export const getViewState = (): BackgroundViewState => {
-  const state = backgroundStore.getState()
-  return {
-    auth: state.auth,
-    gmail: state.gmail,
-  }
-}
-
 export const hydrateFromStorage = async (): Promise<void> => {
-  const raw = await storageGet<unknown>(persistKey)
-  const persisted = persistedBackgroundStateSchema.parse(raw)
+  const raw = await storageLocalGet<unknown>(storageKeys.persistedBackgroundState)
+  if (raw === undefined) return
 
+  const persisted = persistedBackgroundStateSchema.parse(raw)
   const persistedStatus = persisted.auth.status
+
   let status: AuthStatus = 'signed_out'
   if (persistedStatus === 'signed_in') status = 'signed_in'
   else if (persistedStatus === 'error') status = 'error'
@@ -116,9 +108,5 @@ export const hydrateFromStorage = async (): Promise<void> => {
 
 export const persistToStorage = async (): Promise<void> => {
   const persisted = toPersistedState(backgroundStore.getState())
-  await storageSet(persistKey, persisted)
-}
-
-export const clearPersistedState = async (): Promise<void> => {
-  await storageRemove(persistKey)
+  await storageLocalSet(storageKeys.persistedBackgroundState, persisted)
 }

@@ -485,3 +485,313 @@ Phase 1 is complete only if:
 Only then proceed to Phase 2.
 
 END OF PHASE 1.1
+
+
+=====================================================================
+PHASE 1.5 – CLEAN ARCHITECTURE WITH PRACTICAL SOLID
+=====================================================================
+
+GOAL:
+Refactor for maintainability and reuse,
+without turning this into an over-engineered enterprise system.
+
+Rules:
+- Do NOT create new markdown files.
+- Append everything into phase1.md.
+- Refactor existing code.
+- Preserve behavior.
+- Avoid unnecessary abstraction layers.
+- Favor clarity over cleverness.
+
+=====================================================================
+1. SHARED CORE LAYER (REUSE FIRST)
+=====================================================================
+
+Create:
+
+/src/core/
+  errors.ts
+  types.ts
+  constants.ts
+  chrome.ts
+  async.ts
+
+Purpose:
+
+- errors.ts → unified AppError type + mapper
+- types.ts → shared domain types
+- constants.ts → message types + storage keys
+- chrome.ts → wrapper for chrome APIs
+- async.ts → retry, sleep, debounce helpers
+
+Rule:
+Anything used in ≥ 2 modules must move to core.
+
+=====================================================================
+2. LIGHT SOLID PRINCIPLES
+=====================================================================
+
+Apply only these:
+
+S – Single Responsibility (but practical)
+O – Open for extension (avoid modification-heavy code)
+D – Dependency direction: core → background → popup
+
+We will NOT overuse:
+- Interfaces everywhere
+- DI containers
+- Factory patterns
+
+Keep it simple.
+
+=====================================================================
+3. REMOVE DUPLICATION
+=====================================================================
+
+Audit:
+
+- Repeated chrome.storage calls
+- Repeated try/catch blocks
+- Repeated token checks
+- Repeated message response structures
+
+Refactor into reusable helpers.
+
+Example:
+
+Instead of repeating:
+
+try {
+  ...
+} catch (e) {
+  return { type: \"ERROR\", message: ... }
+}
+
+Create:
+
+handleAsync(fn, errorDomain)
+
+Reuse everywhere.
+
+=====================================================================
+4. STORAGE SERVICE – CLEAN BUT SIMPLE
+=====================================================================
+
+storage.service.ts must:
+
+- Abstract chrome.storage
+- Validate with Zod
+- Expose simple API:
+
+getScanMeta()
+setScanMeta()
+
+getInvoices()
+upsertInvoice()
+
+getMessages()
+upsertMessage()
+
+No generic over-complicated repository layer.
+
+Keep it explicit.
+
+=====================================================================
+5. AUTH SERVICE – REUSABLE TOKEN CHECK
+=====================================================================
+
+Create reusable:
+
+ensureValidToken(): Promise<AccessToken>
+
+Used by:
+- gmail.client
+- future scan engine
+
+No duplicate token validation logic anywhere else.
+
+=====================================================================
+6. GMAIL CLIENT – REUSABLE HTTP CORE
+=====================================================================
+
+Create generic:
+
+gmailRequest<T>(endpoint: string, options)
+
+All Gmail calls must go through it.
+
+Benefits:
+- Central retry
+- Central error mapping
+- Central auth injection
+
+No duplicated fetch logic.
+
+=====================================================================
+7. MESSAGE CONTRACT – SHARED CONSTANTS
+=====================================================================
+
+Move message types to:
+
+/core/constants.ts
+
+Example:
+
+export const MESSAGE = {
+  AUTH_LOGIN: \"AUTH_LOGIN\",
+  SCAN_START: \"SCAN_START\",
+  SCAN_STATUS: \"SCAN_STATUS\"
+} as const
+
+No string literals in popup or background.
+
+=====================================================================
+8. STATE – SIMPLE BUT EXPLICIT
+=====================================================================
+
+Instead of heavy state machine class,
+use:
+
+type ScanState =
+  | \"idle\"
+  | \"scanning\"
+  | \"completed\"
+  | \"error\"
+
+Create transition helper:
+
+setScanState(next)
+
+Validate allowed transitions using small guard map.
+
+Keep it readable.
+
+=====================================================================
+9. ERROR MODEL – ONE SHARED STRUCTURE
+=====================================================================
+
+Define:
+
+type AppError = {
+  domain: \"auth\" | \"gmail\" | \"storage\" | \"scan\"
+  message: string
+  recoverable: boolean
+}
+
+All modules must convert errors into AppError.
+
+Popup renders based on recoverable flag.
+
+No raw Error usage outside core.
+
+=====================================================================
+10. FOLDER STRUCTURE (SIMPLIFIED)
+=====================================================================
+
+/src
+  /core
+  /background
+    auth.service.ts
+    gmail.client.ts
+    scan.service.ts
+    storage.service.ts
+    state.ts
+    messaging.ts
+    index.ts
+  /popup
+    popup.tsx
+    state.ts
+
+Flat enough to read.
+Modular enough to scale.
+
+=====================================================================
+11. WHAT WE ARE NOT DOING
+=====================================================================
+
+❌ No DI container
+❌ No abstract base classes
+❌ No excessive generics
+❌ No CQRS
+❌ No event bus
+❌ No micro-layer splitting
+
+This is a Chrome extension.
+Keep it lean.
+
+=====================================================================
+12. PHASE 2 READINESS CHECK
+=====================================================================
+
+Before moving on:
+
+✔ No duplicate logic
+✔ Shared helpers centralized
+✔ Auth reusable
+✔ Gmail reusable
+✔ Storage validated
+✔ Messaging consistent
+✔ No ESLint errors
+✔ No TS errors
+✔ Code easy to read in < 5 minutes
+
+If code is hard to read,
+you over-engineered.
+
+=====================================================================
+END OF PHASE 1.5 – CLEAN SOLID MODE
+=====================================================================
+
+=====================================================================
+PHASE 1.5 (IMPLEMENTED IN REPO) – NOTES
+=====================================================================
+
+Intent:
+- Keep behavior the same (OAuth/login/logout/profile fetch + thin popup UI).
+- Reduce duplication and move cross-cutting helpers into /src/core.
+- Keep SOLID “light”: no DI container, no abstract base classes, no generic repositories.
+
+What changed (high-level):
+- Introduced /src/core as the only shared “reuse-first” layer.
+- Flattened background into small services (auth, gmail client, storage, messaging, state).
+- Centralized RPC message type strings in a shared constant to remove string literals.
+- Unified AppError shape to: domain + message + recoverable (+ optional details).
+
+Key files (Phase 1.5):
+- src/core/constants.ts
+  - messageType (RPC contract constants)
+  - storageKeys (storage key constants)
+  - runtimeUnavailableError
+- src/core/chrome.ts
+  - runtimeSendMessage(), storageLocalGet/Set/Remove(), identityGetAuthToken(), identityRemoveCachedAuthToken()
+- src/core/errors.ts
+  - AppError type (domain/message/recoverable)
+  - toAppError(domain, e) + handleAsync()
+- src/core/async.ts
+  - sleep(), retry(), debounce()
+
+Background (simplified + explicit):
+- src/background/auth.service.ts
+  - ensureValidToken() shared token getter (no duplicated token checks)
+  - login(), logoutBestEffort(), clearTokenCache()
+- src/background/gmail.client.ts
+  - gmailRequest<T>() shared HTTP core for Gmail calls
+  - fetchGmailProfile() implemented via gmailRequest()
+  - central retry-on-401 behavior (token cache clear + best-effort cached token removal)
+- src/background/storage.service.ts
+  - Explicit storage APIs for Phase 2 (scan meta, invoices, messages), validated via Zod
+- src/background/state.ts
+  - Background store + hydration/persistence (uses storageKeys.persistedBackgroundState)
+- src/background/messaging.ts
+  - One place for RPC parsing + routing + response shaping
+  - Uses messageType constants (no RPC string literals)
+- src/background/index.ts
+  - Boots initBackground() and registers messaging
+
+Popup adjustments (behavior preserved):
+- Popup RPC calls now use messageType constants instead of string literals.
+- RpcError now exposes domain + recoverable (instead of code), and popup formats errors accordingly.
+
+Validation:
+- npm run lint → PASS
+- npm run build → PASS

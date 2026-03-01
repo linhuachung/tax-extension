@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import { callBackground, RpcError, runtimeUnavailableError } from '../../services/rpcClient'
+import { messageType, runtimeUnavailableError } from '../../core/constants'
+import { callBackground, RpcError } from '../../services/rpcClient'
 import type { BackgroundViewState } from '../../shared/schemas/state'
 
 export type UiError = {
@@ -11,7 +12,9 @@ export type UiError = {
 const toUiError = (e: unknown): UiError => {
   if (e instanceof RpcError) {
     const details = e.details !== undefined ? JSON.stringify(e.details, null, 2) : null
-    return { title: `${e.code}: ${e.message}`, details }
+    const title =
+      e.message === runtimeUnavailableError ? runtimeUnavailableError : `${e.domain}: ${e.message}`
+    return { title, details }
   }
   if (e instanceof Error) return { title: e.message, details: null }
   return { title: String(e), details: null }
@@ -22,7 +25,11 @@ const errorFromState = (state: BackgroundViewState | null): UiError => {
   if (lastError === undefined) return null
   const details =
     lastError.details !== undefined ? JSON.stringify(lastError.details, null, 2) : null
-  return { title: `${lastError.code}: ${lastError.message}`, details }
+  const title =
+    lastError.message === runtimeUnavailableError
+      ? runtimeUnavailableError
+      : `${lastError.domain}: ${lastError.message}`
+  return { title, details }
 }
 
 const runRpc = (args: {
@@ -63,7 +70,7 @@ export const usePopupController = (): {
       setBusy,
       setState,
       setUiError,
-      promise: callBackground('app.getState', {}),
+      promise: callBackground(messageType.appGetState, {}),
     })
   }, [setBusy, setState, setUiError])
 
@@ -77,21 +84,21 @@ export const usePopupController = (): {
         setBusy,
         setState,
         setUiError,
-        promise: callBackground('auth.login', { interactive: true }),
+        promise: callBackground(messageType.authLogin, { interactive: true }),
       }),
     logout: () =>
       runRpc({
         setBusy,
         setState,
         setUiError,
-        promise: callBackground('auth.logout', {}),
+        promise: callBackground(messageType.authLogout, {}),
       }),
     refreshProfile: () =>
       runRpc({
         setBusy,
         setState,
         setUiError,
-        promise: callBackground('gmail.getProfile', {}),
+        promise: callBackground(messageType.gmailGetProfile, {}),
       }),
   }
 }

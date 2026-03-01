@@ -1,13 +1,14 @@
 import { z } from 'zod'
 
+import { messageType } from '../../core/constants'
 import { appErrorSchema } from './errors'
 import { backgroundViewStateSchema } from './state'
 
 export const rpcTypeSchema = z.enum([
-  'auth.login',
-  'auth.logout',
-  'gmail.getProfile',
-  'app.getState',
+  messageType.authLogin,
+  messageType.authLogout,
+  messageType.gmailGetProfile,
+  messageType.appGetState,
 ])
 
 export type RpcType = z.infer<typeof rpcTypeSchema>
@@ -18,7 +19,7 @@ const baseRequestSchema = z.object({
 
 export const rpcRequestSchema = z.discriminatedUnion('type', [
   baseRequestSchema.extend({
-    type: z.literal('auth.login'),
+    type: z.literal(messageType.authLogin),
     payload: z
       .object({
         interactive: z.boolean().optional(),
@@ -26,15 +27,15 @@ export const rpcRequestSchema = z.discriminatedUnion('type', [
       .strict(),
   }),
   baseRequestSchema.extend({
-    type: z.literal('auth.logout'),
+    type: z.literal(messageType.authLogout),
     payload: z.object({}).strict(),
   }),
   baseRequestSchema.extend({
-    type: z.literal('gmail.getProfile'),
+    type: z.literal(messageType.gmailGetProfile),
     payload: z.object({}).strict(),
   }),
   baseRequestSchema.extend({
-    type: z.literal('app.getState'),
+    type: z.literal(messageType.appGetState),
     payload: z.object({}).strict(),
   }),
 ])
